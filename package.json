@@ -1,11 +1,12 @@
 {
-  "name": "legend-bot",
-  "version": "1.0.0",
+  "name": "legend-pro-max",
+  "version": "4.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.14.1"
+    "discord.js": "^14.14.1",
+    "mongoose": "^7.6.3"
   }
 }
