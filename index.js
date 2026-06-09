@@ -1,210 +1,222 @@
 const {
-Client,
-GatewayIntentBits,
-PermissionsBitField,
-EmbedBuilder,
-ActivityType,
-ActionRowBuilder,
-ButtonBuilder,
-ButtonStyle
+    Client,
+    GatewayIntentBits,
+    PermissionsBitField,
+    EmbedBuilder,
+    ActivityType,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
 } = require('discord.js');
 
 const { QuickDB } = require('quick.db');
 const db = new QuickDB();
 
 const client = new Client({
-intents: [
-GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMembers,
-GatewayIntentBits.GuildMessages,
-GatewayIntentBits.MessageContent
-]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
 const prefix = '!';
-
 client.once('ready', () => {
 
+    console.log(`${client.user.tag} جاهز`);
 
-console.log(`${client.user.tag} جاهز`);
+    const statuses = [
+        {
+            name: 'by y1f_',
+            type: ActivityType.Playing
+        },
+        {
+            name: 'made for notify only',
+            type: ActivityType.Playing
+        }
+    ];
 
-const statuses = [
-    { name: 'by y1f_', type: ActivityType.Playing },
-    { name: 'made for notify only', type: ActivityType.Playing }
-];
+    let index = 0;
 
-let index = 0;
+    client.user.setActivity(
+        statuses[0].name,
+        {
+            type: statuses[0].type
+        }
+    );
 
-client.user.setActivity(statuses[0].name, {
-    type: statuses[0].type
+    setInterval(() => {
+
+        index = (index + 1) % statuses.length;
+
+        client.user.setActivity(
+            statuses[index].name,
+            {
+                type: statuses[index].type
+            }
+        );
+
+    }, 5000);
+
 });
-
-setInterval(() => {
-
-    index = (index + 1) % statuses.length;
-
-    client.user.setActivity(statuses[index].name, {
-        type: statuses[index].type
-    });
-
-}, 5000);
-
-
-});
-
 client.on('messageCreate', async (message) => {
 
+    if (message.author.bot) return;
+    if (!message.guild) return;
+    if (!message.content.startsWith(prefix)) return;
 
-if (message.author.bot) return;
-if (!message.guild) return;
-if (!message.content.startsWith(prefix)) return;
+    if (!message.member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+    )) return;
 
-if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return;
+    const args = message.content
+        .slice(prefix.length)
+        .trim()
+        .split(/ +/);
 
-const args = message.content.slice(prefix.length).trim().split(/ +/);
-const command = args.shift().toLowerCase();
+    const command = args.shift().toLowerCase();
 
-let data = await db.get(`notify_${message.guild.id}`) || {
-    enabled: false,
-    channels: [],
-    message: 'لا يوجد رسالة',
-    deleteTime: 15
-};
+    let data = await db.get(`notify_${message.guild.id}`) || {
+        enabled: false,
+        channels: [],
+        message: 'لا يوجد رسالة',
+        deleteTime: 15
+    };
 
-if (command === 'setchannel') {
+    if (command === 'setchannel') {
 
-    const channels = message.mentions.channels.map(c => c.id);
+        const channels = message.mentions.channels.map(c => c.id);
 
-    if (!channels.length) {
+        if (!channels.length) {
+            return message.reply({
+                embeds: [
+                    new EmbedBuilder()
+                    .setTitle('❌ خطأ')
+                    .setDescription('!setchannel #welcome #rules')
+                ]
+            });
+        }
+
+        data.channels = channels;
+
+        await db.set(`notify_${message.guild.id}`, data);
+
         return message.reply({
             embeds: [
                 new EmbedBuilder()
-                .setTitle('❌ خطأ')
-                .setDescription('!setchannel #welcome #rules')
+                .setTitle('✅ تم الحفظ')
+                .setDescription(`تم حفظ ${channels.length} روم`)
             ]
         });
     }
 
-    data.channels = channels;
+    if (command === 'addchannel') {
 
-    await db.set(`notify_${message.guild.id}`, data);
+        const channel = message.mentions.channels.first();
 
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('✅ تم الحفظ')
-            .setDescription(`تم حفظ ${channels.length} روم`)
-        ]
-    });
-}
+        if (!channel) return;
 
-if (command === 'addchannel') {
+        if (!data.channels.includes(channel.id)) {
+            data.channels.push(channel.id);
+        }
 
-    const channel = message.mentions.channels.first();
+        await db.set(`notify_${message.guild.id}`, data);
 
-    if (!channel) return;
-
-    if (!data.channels.includes(channel.id)) {
-        data.channels.push(channel.id);
+        return message.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('✅ تمت الإضافة')
+                .setDescription(`${channel}`)
+            ]
+        });
     }
 
-    await db.set(`notify_${message.guild.id}`, data);
+    if (command === 'removechannel') {
 
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('✅ تمت الإضافة')
-            .setDescription(`${channel}`)
-        ]
-    });
-}
+        const channel = message.mentions.channels.first();
 
-if (command === 'removechannel') {
+        if (!channel) return;
 
-    const channel = message.mentions.channels.first();
+        data.channels = data.channels.filter(
+            id => id !== channel.id
+        );
 
-    if (!channel) return;
+        await db.set(`notify_${message.guild.id}`, data);
 
-    data.channels = data.channels.filter(
-        id => id !== channel.id
-    );
+        return message.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('✅ تم الحذف')
+                .setDescription(`${channel}`)
+            ]
+        });
+    }
 
-    await db.set(`notify_${message.guild.id}`, data);
+    if (command === 'setmessage') {
 
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('✅ تم الحذف')
-            .setDescription(`${channel}`)
-        ]
-    });
-}
+        const text = args.join(' ');
 
-if (command === 'setmessage') {
+        if (!text) return;
 
-    const text = args.join(' ');
+        data.message = text;
 
-    if (!text) return;
+        await db.set(`notify_${message.guild.id}`, data);
 
-    data.message = text;
+        return message.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('✅ تم تحديث الرسالة')
+            ]
+        });
+    }
 
-    await db.set(`notify_${message.guild.id}`, data);
+    if (command === 'setdelete') {
 
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('✅ تم تحديث الرسالة')
-        ]
-    });
-}
+        const seconds = Number(args[0]);
 
-if (command === 'setdelete') {
+        if (!seconds || seconds < 1 || seconds > 300) return;
 
-    const seconds = Number(args[0]);
+        data.deleteTime = seconds;
 
-    if (!seconds || seconds < 1 || seconds > 300) return;
+        await db.set(`notify_${message.guild.id}`, data);
 
-    data.deleteTime = seconds;
+        return message.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('✅ تم تحديث مدة الحذف')
+                .setDescription(`${seconds} ثانية`)
+            ]
+        });
+    }
 
-    await db.set(`notify_${message.guild.id}`, data);
+    if (command === 'enable') {
 
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('✅ تم تحديث مدة الحذف')
-            .setDescription(`${seconds} ثانية`)
-        ]
-    });
-}
+        data.enabled = true;
 
-if (command === 'enable') {
+        await db.set(`notify_${message.guild.id}`, data);
 
-    data.enabled = true;
+        return message.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('🟢 تم التفعيل')
+            ]
+        });
+    }
 
-    await db.set(`notify_${message.guild.id}`, data);
+    if (command === 'disable') {
 
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('🟢 تم التفعيل')
-        ]
-    });
-}
+        data.enabled = false;
 
-if (command === 'disable') {
+        await db.set(`notify_${message.guild.id}`, data);
 
-    data.enabled = false;
-
-    await db.set(`notify_${message.guild.id}`, data);
-
-    return message.reply({
-        embeds: [
-            new EmbedBuilder()
-            .setTitle('🔴 تم التعطيل')
-        ]
-    });
-}
+        return message.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('🔴 تم التعطيل')
+            ]
+        });
+    }
 
     if (command === 'settings') {
 
@@ -215,7 +227,7 @@ if (command === 'disable') {
                 .addFields(
                     {
                         name: 'الحالة',
-                        value: data.enabled ? '🟢 يعمل' : '🔴 متوقف عن العمل'
+                        value: data.enabled ? '🟢 يعمل' : '🔴 متوقف'
                     },
                     {
                         name: 'الرومات',
@@ -235,57 +247,56 @@ if (command === 'disable') {
             ]
         });
     }
-    
-if (command === 'panel') {
 
-    const embed = new EmbedBuilder()
-        .setTitle('🎛️ لوحة تحكم الإشعارات')
-        .setDescription('اختر العملية التي تريد تنفيذها');
+    if (command === 'panel') {
 
-    const row1 = new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId('notify_enable')
-                .setLabel('تشغيل')
-                .setStyle(ButtonStyle.Success),
+        const embed = new EmbedBuilder()
+            .setTitle('🎛️ لوحة تحكم الإشعارات')
+            .setDescription('اختر العملية التي تريد تنفيذها');
 
-            new ButtonBuilder()
-                .setCustomId('notify_disable')
-                .setLabel('إيقاف')
-                .setStyle(ButtonStyle.Danger),
+        const row1 = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('notify_enable')
+                    .setLabel('تشغيل')
+                    .setStyle(ButtonStyle.Success),
 
-            new ButtonBuilder()
-                .setCustomId('notify_settings')
-                .setLabel('الإعدادات')
-                .setStyle(ButtonStyle.Primary)
-        );
+                new ButtonBuilder()
+                    .setCustomId('notify_disable')
+                    .setLabel('إيقاف')
+                    .setStyle(ButtonStyle.Danger),
 
-    const row2 = new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId('notify_channels')
-                .setLabel('الرومات')
-                .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('notify_settings')
+                    .setLabel('الإعدادات')
+                    .setStyle(ButtonStyle.Primary)
+            );
 
-            new ButtonBuilder()
-                .setCustomId('notify_addchannel')
-                .setLabel('إضافة روم')
-                .setStyle(ButtonStyle.Success),
+        const row2 = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('notify_channels')
+                    .setLabel('الرومات')
+                    .setStyle(ButtonStyle.Secondary),
 
-            new ButtonBuilder()
-                .setCustomId('notify_removechannel')
-                .setLabel('حذف روم')
-                .setStyle(ButtonStyle.Danger)
-        );
+                new ButtonBuilder()
+                    .setCustomId('notify_addchannel')
+                    .setLabel('إضافة روم')
+                    .setStyle(ButtonStyle.Success),
 
-    await message.reply({
-        embeds: [embed],
-        components: [row1, row2]
-    });
-}
+                new ButtonBuilder()
+                    .setCustomId('notify_removechannel')
+                    .setLabel('حذف روم')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+        await message.reply({
+            embeds: [embed],
+            components: [row1, row2]
+        });
+    }
 
 });
-
 client.on('guildMemberAdd', async (member) => {
 
     const data = await db.get(`notify_${member.guild.id}`);
@@ -308,6 +319,7 @@ client.on('guildMemberAdd', async (member) => {
             msg.delete().catch(() => {});
         }, data.deleteTime * 1000);
     }
+
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -384,38 +396,39 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true
         });
     }
-if (interaction.customId === 'notify_channels') {
 
-    return interaction.reply({
-        embeds: [
-            new EmbedBuilder()
+    if (interaction.customId === 'notify_channels') {
+
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
                 .setTitle('📋 الرومات المحفوظة')
                 .setDescription(
                     data.channels?.length
                         ? data.channels.map(id => `<#${id}>`).join('\n')
                         : 'لا يوجد رومات'
                 )
-        ],
-        ephemeral: true
-    });
-}
+            ],
+            ephemeral: true
+        });
+    }
 
-if (interaction.customId === 'notify_addchannel') {
+    if (interaction.customId === 'notify_addchannel') {
 
-    return interaction.reply({
-        content: 'استعمل مؤقتاً: !addchannel #الروم',
-        ephemeral: true
-    });
-}
+        return interaction.reply({
+            content: 'استعمل مؤقتاً: !addchannel #الروم',
+            ephemeral: true
+        });
+    }
 
-if (interaction.customId === 'notify_removechannel') {
+    if (interaction.customId === 'notify_removechannel') {
 
-    return interaction.reply({
-        content: 'استعمل مؤقتاً: !removechannel #الروم',
-        ephemeral: true
-    });
-}
-    
+        return interaction.reply({
+            content: 'استعمل مؤقتاً: !removechannel #الروم',
+            ephemeral: true
+        });
+    }
+
 });
 
 client.login(process.env.TOKEN);
