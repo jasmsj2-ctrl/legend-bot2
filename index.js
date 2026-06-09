@@ -3,7 +3,10 @@ Client,
 GatewayIntentBits,
 PermissionsBitField,
 EmbedBuilder,
-ActivityType
+ActivityType,
+ActionRowBuilder,
+ButtonBuilder,
+ButtonStyle
 } = require('discord.js');
 
 const { QuickDB } = require('quick.db');
@@ -232,7 +235,36 @@ if (command === 'disable') {
             ]
         });
     }
+    
+if (command === 'panel') {
 
+    const embed = new EmbedBuilder()
+        .setTitle('🎛️ لوحة تحكم الإشعارات')
+        .setDescription('اختر العملية التي تريد تنفيذها');
+
+    const row1 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('notify_enable')
+                .setLabel('تشغيل')
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId('notify_disable')
+                .setLabel('إيقاف')
+                .setStyle(ButtonStyle.Danger),
+
+            new ButtonBuilder()
+                .setCustomId('notify_settings')
+                .setLabel('الإعدادات')
+                .setStyle(ButtonStyle.Primary)
+        );
+
+    await message.reply({
+        embeds: [embed],
+        components: [row1]
+    });
+}
 
 });
 
@@ -258,6 +290,83 @@ client.on('guildMemberAdd', async (member) => {
             msg.delete().catch(() => {});
         }, data.deleteTime * 1000);
     }
+});
+
+client.on('interactionCreate', async (interaction) => {
+
+    if (!interaction.isButton()) return;
+
+    if (!interaction.member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+    )) {
+        return interaction.reply({
+            content: '❌ ليس لديك صلاحية',
+            ephemeral: true
+        });
+    }
+
+    let data = await db.get(`notify_${interaction.guild.id}`) || {
+        enabled: false,
+        channels: [],
+        message: 'لا يوجد رسالة',
+        deleteTime: 15
+    };
+
+    if (interaction.customId === 'notify_enable') {
+
+        data.enabled = true;
+
+        await db.set(`notify_${interaction.guild.id}`, data);
+
+        return interaction.reply({
+            content: '🟢 تم تشغيل النظام',
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId === 'notify_disable') {
+
+        data.enabled = false;
+
+        await db.set(`notify_${interaction.guild.id}`, data);
+
+        return interaction.reply({
+            content: '🔴 تم إيقاف النظام',
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId === 'notify_settings') {
+
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                .setTitle('⚙️ إعدادات البوت')
+                .addFields(
+                    {
+                        name: 'الحالة',
+                        value: data.enabled ? '🟢 يعمل' : '🔴 متوقف'
+                    },
+                    {
+                        name: 'الرومات',
+                        value: data.channels?.length
+                            ? data.channels.map(id => `<#${id}>`).join('\n')
+                            : 'غير محدد'
+                    },
+                    {
+                        name: 'مدة الحذف',
+                        value: `${data.deleteTime} ثانية`
+                    },
+                    {
+                        name: 'الرسالة',
+                        value: data.message
+                    }
+                )
+            ],
+            ephemeral: true
+        });
+    }
+
 });
 
 client.login(process.env.TOKEN);
