@@ -260,9 +260,27 @@ if (command === 'panel') {
                 .setStyle(ButtonStyle.Primary)
         );
 
+    const row2 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('notify_channels')
+                .setLabel('الرومات')
+                .setStyle(ButtonStyle.Secondary),
+
+            new ButtonBuilder()
+                .setCustomId('notify_addchannel')
+                .setLabel('إضافة روم')
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId('notify_removechannel')
+                .setLabel('حذف روم')
+                .setStyle(ButtonStyle.Danger)
+        );
+
     await message.reply({
         embeds: [embed],
-        components: [row1]
+        components: [row1, row2]
     });
 }
 
@@ -366,7 +384,38 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true
         });
     }
+if (interaction.customId === 'notify_channels') {
 
+    return interaction.reply({
+        embeds: [
+            new EmbedBuilder()
+                .setTitle('📋 الرومات المحفوظة')
+                .setDescription(
+                    data.channels?.length
+                        ? data.channels.map(id => `<#${id}>`).join('\n')
+                        : 'لا يوجد رومات'
+                )
+        ],
+        ephemeral: true
+    });
+}
+
+if (interaction.customId === 'notify_addchannel') {
+
+    return interaction.reply({
+        content: 'استعمل مؤقتاً: !addchannel #الروم',
+        ephemeral: true
+    });
+}
+
+if (interaction.customId === 'notify_removechannel') {
+
+    return interaction.reply({
+        content: 'استعمل مؤقتاً: !removechannel #الروم',
+        ephemeral: true
+    });
+}
+    
 });
 
 client.login(process.env.TOKEN);
