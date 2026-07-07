@@ -250,51 +250,98 @@ client.on('messageCreate', async (message) => {
 
     if (command === 'panel') {
 
-        const embed = new EmbedBuilder()
-            .setTitle('🎛️ لوحة تحكم الإشعارات')
-            .setDescription('اختر العملية التي تريد تنفيذها');
-
-        const row1 = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('notify_enable')
-                    .setLabel('تشغيل')
-                    .setStyle(ButtonStyle.Success),
-
-                new ButtonBuilder()
-                    .setCustomId('notify_disable')
-                    .setLabel('إيقاف')
-                    .setStyle(ButtonStyle.Danger),
-
-                new ButtonBuilder()
-                    .setCustomId('notify_settings')
-                    .setLabel('الإعدادات')
-                    .setStyle(ButtonStyle.Primary)
-            );
-
-        const row2 = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('notify_channels')
-                    .setLabel('الرومات')
-                    .setStyle(ButtonStyle.Secondary),
-
-                new ButtonBuilder()
-                    .setCustomId('notify_addchannel')
-                    .setLabel('إضافة روم')
-                    .setStyle(ButtonStyle.Success),
-
-                new ButtonBuilder()
-                    .setCustomId('notify_removechannel')
-                    .setLabel('حذف روم')
-                    .setStyle(ButtonStyle.Danger)
-            );
-
-        await message.reply({
-            embeds: [embed],
-            components: [row1, row2]
+    const embed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setTitle('📢 ORIX NOTIFY PANEL')
+        .setDescription('اختر الإعداد الذي تريد تعديله')
+        .addFields(
+            {
+                name: '🟢 الحالة',
+                value: data.enabled ? 'مفعل' : 'معطل',
+                inline: true
+            },
+            {
+                name: '📢 الرومات',
+                value: `${data.channels.length}`,
+                inline: true
+            },
+            {
+                name: '🗑️ حذف الرسالة',
+                value: `${data.deleteTime}s`,
+                inline: true
+            },
+            {
+                name: '💬 الرسالة',
+                value: data.message
+            }
+        )
+        .setFooter({
+            text: 'ORIX Notify'
         });
-    }
+
+    const row1 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('notify_enable')
+                .setLabel('تشغيل')
+                .setEmoji('🟢')
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId('notify_disable')
+                .setLabel('إيقاف')
+                .setEmoji('🔴')
+                .setStyle(ButtonStyle.Danger),
+
+            new ButtonBuilder()
+                .setCustomId('notify_settings')
+                .setLabel('الإعدادات')
+                .setEmoji('⚙️')
+                .setStyle(ButtonStyle.Primary)
+        );
+
+    const row2 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('notify_channels')
+                .setLabel('الرومات')
+                .setEmoji('📋')
+                .setStyle(ButtonStyle.Secondary),
+
+            new ButtonBuilder()
+                .setCustomId('notify_addchannel')
+                .setLabel('إضافة')
+                .setEmoji('➕')
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId('notify_removechannel')
+                .setLabel('حذف')
+                .setEmoji('➖')
+                .setStyle(ButtonStyle.Danger)
+        );
+
+    const row3 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('notify_message')
+                .setLabel('الرسالة')
+                .setEmoji('💬')
+                .setStyle(ButtonStyle.Primary),
+
+            new ButtonBuilder()
+                .setCustomId('notify_time')
+                .setLabel('مدة الحذف')
+                .setEmoji('⏱️')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+    return message.reply({
+        embeds: [embed],
+        components: [row1, row2, row3]
+    });
+
+}
 
 });
 client.on('guildMemberAdd', async (member) => {
